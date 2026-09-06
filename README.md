@@ -126,7 +126,7 @@ Workers AI has no local simulator, so the development server may request Cloudfl
 
 Prerequisites:
 
-- Docker Engine with Docker Compose
+- Docker Engine with Docker Compose runs here
 - `make` and `curl` on the host
 - A Cloudflare account ID and API token authorized to use Workers AI
 
