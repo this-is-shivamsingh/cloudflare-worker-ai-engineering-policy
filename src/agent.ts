@@ -1,11 +1,12 @@
 import { AIChatAgent } from "@cloudflare/ai-chat";
-import { generateText, convertToModelMessages, streamText, type UIMessage } from "ai";
+import { generateText, convertToModelMessages, type UIMessage } from "ai";
 import { callable } from "agents";
 import { createWorkersAI } from "workers-ai-provider";
 import { z } from "zod";
 
 import { buildChatSystemPrompt, buildReviewPrompt } from "./ai/prompts";
 import { completeAiReview, isCurrentReview, markAiUnavailable, sanitizeFindings } from "./ai/review";
+import { completedChatResponse } from "./chat-response";
 import { debugChatEvent, debugReviewEvent } from "./debug";
 import { analyzePolicy, type PolicyFinding } from "./policy";
 import {
@@ -239,14 +240,14 @@ export class EngineeringPolicyAgent extends AIChatAgent<Env, PolicyAgentState> {
     const abortSignal = options?.abortSignal ? AbortSignal.any([options.abortSignal, timeout]) : timeout;
     try {
       const workersai = createWorkersAI({ binding: this.env.AI });
-      const result = streamText({
+      const result = await generateText({
         model: workersai(MODEL_ID, { sessionAffinity: this.sessionAffinity }),
         system: buildChatSystemPrompt(findings),
         messages: await convertToModelMessages(this.messages),
         maxOutputTokens: 700,
         abortSignal
       });
-      return finish(result.toUIMessageStreamResponse({ headers: { "cache-control": "no-store" } }));
+      return finish(completedChatResponse(result.text));
     } catch {
       return finish(new Response(JSON.stringify({ error: "AI explanation is temporarily unavailable." }), {
         status: 503,

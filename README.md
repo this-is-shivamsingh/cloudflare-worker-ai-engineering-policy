@@ -2,7 +2,7 @@
 
 Engineering Policy Copilot reviews a focused subset of GitHub Actions and Dockerfile guardrails. Deterministic code produces the findings; Cloudflare Workers AI explains those findings and answers follow-up questions without being allowed to change policy truth.
 
-Phase 2 status: implemented and verified locally. The app is not yet deployed and the repository has not yet been published.
+Phase 2 status: implemented, verified locally, and published as source. The app is not yet deployed.
 
 ## What it demonstrates
 
@@ -103,7 +103,22 @@ Start the full-stack development server:
 npm run dev
 ```
 
-To print metadata-only Agent review/chat events in the local Worker terminal, copy `.dev.vars.example` to the ignored `.dev.vars` file before starting development. `DEBUG_AGENT_EVENTS=1` is opt-in, and its enablement check is compiled to `false` in production builds. Logs include method, direction, character count, result status, rule IDs/count, duration, and usage counters—never source/chat/prompt/model text, payloads, session IDs, credentials, or headers.
+Create the private local variables file from the tracked template, edit the two Cloudflare placeholders in a trusted editor, and restrict its permissions:
+
+```sh
+cp .dev.vars.example .dev.vars
+chmod 600 .dev.vars
+```
+
+Keep `.dev.vars` private. It contains raw credential values, is ignored by Git and Docker build context, and must never be printed, pasted into chat, or committed. Ask Codex to [use `$local-setup` to verify this checkout](./.codex/skills/local-setup/SKILL.md) without printing credentials.
+
+Start with safe metadata-only Agent review/chat event logging enabled:
+
+```sh
+npm run dev:debug
+```
+
+The POSIX script sets `DEBUG_AGENT_EVENTS=1` for `npm run dev`. Debug output is limited to safe inbound/outbound event metadata: method, direction, character count, result status, rule IDs/count, duration, and usage counters. It must never log policy source, chat text, prompts, model input/output, payloads, session IDs, credentials, or headers. Debug enablement is compiled to `false` in production builds.
 
 Workers AI has no local simulator, so the development server may request Cloudflare authentication for the remote AI binding. One authorized local smoke test exercised the configured live model against the safe built-in GitHub Actions example; it created no deployment.
 
@@ -124,17 +139,14 @@ Create the credential in the Cloudflare Dashboard:
 
 Cloudflare references: [Workers AI REST setup](https://developers.cloudflare.com/workers-ai/get-started/rest-api/), [model-run API permissions](https://developers.cloudflare.com/api/resources/ai/methods/run/), and [finding an account ID](https://developers.cloudflare.com/fundamentals/account/find-account-and-zone-ids/).
 
-Store the token in a mode-`600` file outside this repository and provide only its absolute path plus the non-secret account ID at runtime. Do not put the token in `.env`, `.dev.vars`, the image, Compose configuration, or source control:
+Create the ignored raw-value file from the tracked placeholder template, edit both Cloudflare values in a trusted editor, and keep it private:
 
 ```sh
-install -m 600 /dev/null "$HOME/.cloudflare-engineering-policy-token"
-# Open that file in a trusted editor and paste only the token value.
-chmod 600 "$HOME/.cloudflare-engineering-policy-token"
-export CLOUDFLARE_ACCOUNT_ID='your-account-id'
-export CLOUDFLARE_API_TOKEN_FILE="$HOME/.cloudflare-engineering-policy-token"
+cp .dev.vars.example .dev.vars
+chmod 600 .dev.vars
 ```
 
-Use a narrowly scoped, revocable token. Compose mounts the file read-only at runtime as a Docker secret; the entrypoint exports it only inside the container process for Wrangler. The token value is not supplied as a Compose environment value, Docker build argument, or image layer. Remove the token file and unset the two exported variables when finished.
+The file uses this contract: `DEBUG_AGENT_EVENTS=1`, raw `CLOUDFLARE_API_TOKEN`, and raw `CLOUDFLARE_ACCOUNT_ID`. Use a narrowly scoped, revocable token. Compose bind-mounts the ignored file read-only at `/run/secrets/cloudflare_dev_vars`; the entrypoint exports its variables only inside the runtime process for Wrangler. `.dockerignore` excludes it before `COPY . .`, and neither the values nor the file contents enter image layers, image metadata, Compose configuration output, application logs, Git, or prompt history.
 
 Build and start the local Worker/UI:
 
@@ -144,7 +156,7 @@ make docker-run
 
 Open <http://localhost:5173>. To use a different host port, run `make docker-run HOST_PORT=8787` and open <http://localhost:8787>.
 
-The port binds only to host loopback; it is not exposed to the local network. Invalid, expired, or insufficient Cloudflare credentials cause startup to exit without a restart loop. Run `make docker-logs` to diagnose authentication failures, then correct the credential file or account ID and run `make docker-run` again.
+The port binds only to host loopback; it is not exposed to the local network. A missing, unreadable, empty, or placeholder `.dev.vars` value causes startup to exit without a restart loop. Invalid, expired, or insufficient Cloudflare credentials fail when Wrangler accesses the remote binding. Run `make docker-logs` to diagnose the error without printing `.dev.vars`, correct the file privately, and run `make docker-run` again.
 
 Inspect logs and stop the service:
 
@@ -160,7 +172,7 @@ make docker-test
 make docker-smoke
 ```
 
-Docker runs the same Vite-powered local Worker and UI as `npm run dev`. Deterministic policy checks execute locally in the container. The `AI` binding still uses Wrangler's remote binding to Cloudflare Workers AI, authenticated at runtime by `CLOUDFLARE_ACCOUNT_ID` and the secret-mounted API token; no model credential is sent to the browser. If Workers AI is unavailable after startup, the existing deterministic-results fallback remains in effect.
+Docker runs the same Vite-powered local Worker and UI as `npm run dev`. Deterministic policy checks execute locally in the container. The `AI` binding still uses Wrangler's remote binding to Cloudflare Workers AI, authenticated at runtime from the read-only `.dev.vars` mount; no model credential is sent to the browser. If Workers AI is unavailable after startup, the existing deterministic-results fallback remains in effect.
 
 This workflow is local development only. It publishes port `5173` from a development server and does not deploy or create Cloudflare resources. Production remains the separate, explicitly authorized `npm run deploy` workflow described below.
 
@@ -213,7 +225,7 @@ No D1, Pages, Workflows, KV, application-level MCP, or runtime multi-agent syste
 
 ## Testing evidence
 
-- Final local result: 40 deterministic/unit tests and 14 Worker/Agent integration tests pass; TypeScript, ESLint, and the production build also pass.
+- Final local result: 46 deterministic/unit/configuration tests and 14 Worker/Agent integration tests pass; TypeScript, ESLint, and the production build also pass.
 - Deterministic fixtures cover rule positives, negatives, boundary SHA lengths, AST line locations, permission overrides, multi-stage images, variable users, supported ENV/ARG forms, continuations, invalid YAML, and unsupported Docker heredocs.
 - Unit tests cover source/chat bounds, high-confidence credential rejection, assignment redaction, and prompts that preserve deterministic authority.
 - Worker integration tests cover malformed session routing, valid Agent routing, Durable Object state restoration/reset/isolation, mocked AI success/failure/timeout, stale-completion rejection, rejected-secret state/usage, redacted finding/chat persistence and deletion, concurrent review admission, and review/chat inference caps that survive reset.

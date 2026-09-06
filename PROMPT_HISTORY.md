@@ -2,6 +2,39 @@
 
 This file records visible prompts exchanged during AI-assisted development. It does not include hidden reasoning. Secrets must be replaced with an explicit `[REDACTED: reason]` marker. Historical entries written before PH-046 use the plan's former root-level path, `PLAN.md`; that file now lives at [`docs/PLAN.md`](./docs/PLAN.md), and exact prompts remain verbatim.
 
+## PH-057 — Review secure local setup changes
+
+**Timestamp:** 2026-09-07T01:16:22+05:30
+**From:** Engineering Policy Copilot orchestrator
+**To:** Docker security reviewer
+**Purpose:** Independently review the uncommitted local setup and Docker credential-handling changes before publication.
+
+### Exact prompt
+
+> Perform a read-only independent review of the current engineering-policy-copilot working-tree diff against origin/main. Focus on correctness and security of raw `.dev.vars` handling, Docker build/runtime isolation, Compose behavior, entrypoint failure paths, the `dev:debug` POSIX contract and logging documentation, the new local-setup skill, and focused tests. Read repository instructions. Do not edit files, inspect or print the ignored real `.dev.vars`, commit, push, deploy, or mutate any resource. Run only safe static checks that do not expose credential values. Report findings first with severity, exact file/line evidence, and concrete failure scenario; then list checks run, assumptions, and blockers. Explicitly say when there are no findings.
+
+### Result
+
+- Review was interrupted when the project operation reached its 10-minute limit; no reviewer verdict was returned and no reviewer files were changed.
+
+## PH-056 — Secure raw-value local setup
+
+**Timestamp:** 2026-09-07T01:08:30+05:30
+**From:** Parent prompt engineer
+**To:** Engineering Policy Copilot orchestrator
+**Purpose:** Implement secure raw-value local credentials, Docker loading, debug guidance, setup skill, verification, and publication.
+
+### Exact prompt
+
+> Record this exact prompt in PROMPT_HISTORY.md with all user-provided credential values replaced by `[REDACTED: Cloudflare credential]`. User confirms the desired ignored `.dev.vars` format is raw values: `DEBUG_AGENT_EVENTS=1`, `CLOUDFLARE_API_TOKEN='[REDACTED: Cloudflare credential]'`, `CLOUDFLARE_ACCOUNT_ID='[REDACTED: Cloudflare credential]'`. User authorizes implementation, commit, and normal non-force push to the configured public project remote. First read instructions and goal-driven-execution/project-orchestrator/skill-creator. Implement only under engineering-policy-copilot: (1) update `.dev.vars.example` with placeholders for the exact raw-value contract, never token-file paths; preserve ignore rules. Make Docker development consume ignored `.dev.vars` at runtime securely, without copying it into the build image, image metadata, Compose output, logs, Git, or prompt history. Update README to use `cp .dev.vars.example .dev.vars`, then edit the two values; state .dev.vars must stay private. (2) create a validated project-local `local-setup` skill under `.codex/skills/` that guides a contributor through checking Docker, Node/npm, Wrangler presence/version, Wrangler auth, `.dev.vars`, token/account availability, and explains which failures require user intervention; it must not solicit or print tokens. Link its invocation from README. (3) add an accurate POSIX `dev:debug` package script that sets DEBUG_AGENT_EVENTS=1 for `npm run dev` (not the invalid `VAR=1 && command` form). README must explain that it logs only safe inbound/outbound event metadata and must not log policy/chat/prompt/model contents/secrets. (4) add/update focused tests or scripts necessary to verify Docker env loading and the debug command/documentation contract without reading/leaking a real .dev.vars. Run all relevant tests and docker/static configuration checks. (5) audit all candidate staged files and PROMPT_HISTORY for credentials; ensure this prompt is redacted. Then commit with a clear message and push main normally to the existing project origin. Do not deploy or mutate Cloudflare. If any repeat blocker occurs twice, stop and report. Required result: files, test results, no-secrets audit, commit SHA, push URL, and prompt history entry.
+
+### Result
+
+- Implemented raw-value `.dev.vars` placeholders, read-only Docker runtime mounting, private-file documentation, the POSIX `dev:debug` command, the project-local `local-setup` skill, and focused configuration/runtime tests.
+- Verification passed: 46 unit/policy/configuration tests, 14 Worker/Agent tests, TypeScript, ESLint, production build, Compose validation, entrypoint shell syntax, local-setup skill validation, and a Docker image inspection proving `.dev.vars` and credential metadata were absent. Sandbox-restricted Worker and Docker checks each passed on one approved retry.
+- The independent review was interrupted at the required 10-minute operation limit before returning a verdict.
+- Commit, final staged no-secrets audit, and push were not completed before the time limit. No deployment, Cloudflare resource mutation, or remote write occurred.
+
 ## PH-055 — Relay publication authorization
 
 **Timestamp:** 2026-09-07T00:39:26+05:30
@@ -1084,6 +1117,128 @@ This file records visible prompts exchanged during AI-assisted development. It d
 - Provided a syntactically valid workflow using `permissions: write-all` and `actions/checkout@v4`.
 - Expected findings: `GHA001` for the mutable action reference and `GHA002` for overly broad root permissions.
 - No code or external state was changed.
+
+## PH-063 — Assess progressive chat protocol with explicit delta/snapshot updates
+
+**Timestamp:** 2026-09-07T02:20:00+05:30
+**From:** Parent prompt engineer
+**To:** Engineering Policy Copilot coding agent
+**Purpose:** Restore progressive chat safely without guessing at text overlap.
+
+### Exact delegated prompt
+
+> Record this exact prompt in PROMPT_HISTORY.md. User authorizes a 5–10 minute implementation to restore progressive chat output without repeated text. Read project instructions. Replace the current completed-only chat response with a streaming-preserving protocol that explicitly distinguishes `delta` (append) from `snapshot` (replace) at the server/client boundary, or adapt existing Agent/AI SDK protocol correctly if it already supports an equivalent explicit distinction. Do not use fragile content-based deduplication that could erase legitimate repeated words. Preserve safety checks, cancellation, timeout, status/pending UI, usage limits, deterministic findings context, and error handling. Add focused tests covering: true deltas append; cumulative snapshots replace; overlapping snapshots never create duplication; intentional repeated words in a true delta remain. Run targeted plus relevant full checks. Do not read/expose credentials, commit, push, deploy, or mutate Cloudflare. Stop after two identical errors or at 10 minutes and report blocker. Return architecture used, files/tests/results, and whether UI remains word-by-word progressive.
+
+### Result
+
+- Blocked before implementation to avoid an unsafe protocol claim. The current `workers-ai-provider` maps both Workers AI native `response` chunks and OpenAI-compatible `choices[0].delta.content` chunks to the same AI SDK `text-delta` event. By the time `EngineeringPolicyAgent.onChatMessage()` receives the `streamText()` result, there is no mode marker that can distinguish a true incremental delta from a cumulative snapshot.
+- `AIChatAgent` and the AI SDK correctly append `text-delta` events; adding content-prefix/overlap detection would be fragile and could erase intentional repeated words, contrary to the requested constraints.
+- A safe implementation needs a source adapter that receives an upstream contract with an explicit mode field (for example a custom Workers AI raw-stream adapter whose event schema guarantees `delta` versus `snapshot`) before forwarding a corresponding typed UI protocol update. The existing public provider path does not expose that distinction.
+- No code, tests, deployment, commit, push, credentials, or Cloudflare resources were changed; this prompt-history entry is the only mutation.
+
+## PH-062 — Fix review label and add visible chat pending state
+
+**Timestamp:** 2026-09-07T02:10:00+05:30
+**From:** Parent prompt engineer
+**To:** Engineering Policy Copilot coding agent
+**Purpose:** Correct the review label and make chat submission visibly pending.
+
+### Exact delegated prompt
+
+> Record this exact prompt in PROMPT_HISTORY.md. User authorizes two UI fixes under the project 10-minute timebox. Read project instructions. (1) Fix the review button typo from `Run vieview` to clear correct wording (`Run review`, unless current surrounding copy makes `Run policy review` materially more consistent—choose the smallest consistent wording). (2) When a user submits chat, show an accessible visible pending status such as “Copilot is responding…” immediately until the request settles; prevent duplicate submits while pending; clear the indicator on success and all error states; preserve the existing non-streaming response behavior. Use existing `useAgentChat` status/isStreaming/isRecovering semantics rather than inventing unreliable local timing state if possible. Add focused tests for label and pending lifecycle, plus browser/local check if feasible. Run relevant tests/typecheck/lint/build. Do not read/expose credentials, commit, push, deploy, or mutate Cloudflare. Stop after two identical errors or 10 minutes. Report files, verification, and exact visible pending text.
+
+### Result
+
+- Corrected the idle review-button label to `Run review`, the smallest wording consistent with the surrounding UI.
+- Added `isChatPending()` using the existing `useAgentChat` `submitted`/`streaming` status and `isStreaming`/`isRecovering` flags; no local timing state was introduced.
+- While pending, the chat panel exposes the accessible `role="status"` text `Copilot is responding…` (or the existing recovery-specific text). The submit button says `Answering…` and is disabled, preventing duplicate submissions. The pending indicator clears for both `ready` and `error` states.
+- Added focused label and pending-lifecycle tests. Verification passed: focused tests; full unit suite (50/50); Worker integration suite (14/14); typecheck; lint; production build; build-output credential verifier; and `git diff --check`.
+- No browser run was needed: the deterministic hook-state lifecycle test covers submitted, streaming, recovering, ready, and error transitions without a credentialed remote model call.
+- Changed files: `src/client/App.tsx`, `src/client/chat-status.ts`, `tests/unit/chat-status.test.ts`, and `PROMPT_HISTORY.md`. No credentials, deployment, commit, push, or Cloudflare mutation occurred.
+
+## PH-061 — Fix duplicated follow-up chat text
+
+**Timestamp:** 2026-09-07T02:00:00+05:30
+**From:** Parent prompt engineer
+**To:** Engineering Policy Copilot coding agent
+**Purpose:** Replace unsafe overlapping chat streaming with a completed-response path.
+
+### Exact delegated prompt
+
+> Record this exact prompt in PROMPT_HISTORY.md. User authorizes fixing only the repeated chat text bug, with the project 10-minute timebox. Read project instructions. Implement the smallest safe server-side change identified in diagnosis: do not let overlapping Workers AI streaming chunks be appended as separate user-visible text. Prefer a completed-response path (`generateText` or equivalent) that preserves the existing deterministic findings context, safety checks, cancellation/timeout behavior, usage limits, and chat error semantics. Do not change the review explanation path or unrelated button typo. Add focused regression coverage proving that an overlapping/cumulative provider chunk scenario cannot produce duplicated visible phrases; test behavior rather than any real API. Run all relevant tests/typecheck/lint/build, and a browser/local check if feasible. Do not read/expose credentials, commit, push, deploy, or mutate Cloudflare. Stop after two identical errors or 10 minutes. Report root cause, files, exact verification, and whether response is no longer token-by-token streamed.
+
+### Result
+
+- Replaced only the follow-up chat `streamText()` call with awaited `generateText()` in `EngineeringPolicyAgent.onChatMessage()`. The review explanation still uses its existing completed-response path and the unrelated review-button typo was not changed.
+- The chat path retains the same Workers AI model, deterministic findings system prompt, converted persisted messages, `700` output-token cap, existing combined cancellation/15-second timeout signal, per-session usage increment/limit, and 503 error response.
+- Added `src/chat-response.ts`, which returns a plain-text, no-store response. `AIChatAgent` turns that final text into its normal client response, so upstream overlapping stream chunks are never appended to the visible chat message.
+- Added a focused unit test that supplies a simulated overlapping/cumulative chunk scenario and verifies only the completed provider text is returned; it does not call a real model.
+- Verification passed: focused test; full unit suite (48/48); Worker integration suite (14/14); typecheck; lint; production build; build-output credential verifier; and `git diff --check`.
+- No live browser check was run because that would require a credentialed remote Workers AI invocation; the regression is deterministic and provider-independent. Responses are no longer token-by-token model streamed, but remain delivered through the existing Agent response protocol after the completed model response is available.
+- Changed files: `src/agent.ts`, `src/chat-response.ts`, `tests/unit/chat-response.test.ts`, and `PROMPT_HISTORY.md`. No credentials, deployment, commit, push, or Cloudflare mutation occurred.
+
+## PH-060 — Diagnose review label and duplicated streaming chat text
+
+**Timestamp:** 2026-09-07T01:50:00+05:30
+**From:** Parent prompt engineer
+**To:** Engineering Policy Copilot coding agent
+**Purpose:** Diagnose two reported UI defects without changing application code.
+
+### Exact delegated prompt
+
+> Record this exact prompt in PROMPT_HISTORY.md, then diagnose only—do not change code. User screenshots show (1) button text “Run review” and asks why it is incorrect, and (2) chat responses repeatedly duplicate words/phrases while streaming. Inspect the current source and, if useful, reproduce locally. State the exact code path/root cause for each, whether either is an intentional label change or rendering/streaming bug, and the smallest safe fix. Do not read or expose .dev.vars contents, deploy, commit, or push.
+
+### Result
+
+- The review button defect is a source typo, not an intentional label change: `src/client/App.tsx` renders the idle submit label as `"Run vieview"`.
+- The duplicate chat text is a streaming bug. `App.tsx` renders `useAgentChat()` messages without any text duplication logic. The server calls `streamText()` in `EngineeringPolicyAgent.onChatMessage()` and returns its SSE UI-message stream. `workers-ai-provider` maps each Workers AI stream `response`/`choices[].delta.content` value as a `text-delta`; the AI SDK and `AIChatAgent` append every such delta. The reported repeated prefixes/phrases match cumulative or overlapping upstream chunks being treated as additive deltas.
+- Smallest safe remediation: use `generateText()` for this bounded follow-up endpoint and return its final text as a plain-text `Response`. `AIChatAgent` converts a plain-text response into one text stream, avoiding unsafe interpretation of upstream chunks. This trades token-by-token UI streaming for correct text. If token streaming must remain, add a tested server-side overlap-normalization transform at the provider boundary; do not deduplicate rendered text because legitimate repetitions could be lost.
+- No application code, credentials, deployment, commit, or push changed; this prompt-history entry is the only file mutation.
+
+## PH-059 — Prevent credential artifacts in build output
+
+**Timestamp:** 2026-09-07T01:40:00+05:30
+**From:** Parent prompt engineer
+**To:** Engineering Policy Copilot coding agent
+**Purpose:** Prevent local credential paths from remaining in production build output.
+
+### Exact delegated prompt
+
+> Record this exact prompt in engineering-policy-copilot/PROMPT_HISTORY.md. User authorizes fixing the discovered build artifact secret leak only. Read project instructions, including 10-minute limit and no-secret rules. Identify why `npm run build` copies ignored `.dev.vars` into `dist/`. Implement the smallest robust fix so no `.env`, `.dev.vars`, token/credential file, or Wrangler credential directory can be emitted to `dist/`, without breaking normal static assets. Add a focused regression test/script checking built output for forbidden runtime/credential file paths; it must never print or read actual credential contents. Run build plus relevant tests/checks and confirm output is clean. Do not commit, push, deploy, or mutate Cloudflare. Preserve other uncommitted work. Stop after two identical errors or 10 minutes. Return root cause, changes, verification, and prompt-history update.
+
+### Result
+
+- Root cause: `@cloudflare/vite-plugin` calls its preview helper to serialize locally loaded dev vars into a generated Worker `.dev.vars` asset whenever a Worker config path and local vars exist. This is for `vite preview`, independent of `.gitignore` and `.dockerignore`.
+- Added a post-stage Vite plugin that removes sensitive generated asset paths before Vite writes them, including `.dev.vars`, `.env*`, token/key files, and `.cloudflare`/`.config`/`.wrangler` paths.
+- Added path-only build-output sanitizer and verifier scripts. The build command keeps both as defense in depth: the sanitizer removes any future sensitive path and the verifier fails if one remains. Neither script reads or prints file contents.
+- Added a focused regression test using empty placeholder files only; it verifies sensitive paths are removed and a normal static asset remains.
+- Verification passed: production build emitted no `.dev.vars`; sanitizer removed `0` paths; verifier reported no forbidden credential paths; 47/47 unit tests; 14/14 Worker integration tests; typecheck; lint; and `git diff --check`.
+- Changed files: `vite.config.ts`, `package.json`, `scripts/build-output-safety.mjs`, `scripts/sanitize-build-output.mjs`, `scripts/verify-build-output.mjs`, `tests/unit/build-output-safety.test.ts`, and `PROMPT_HISTORY.md`. No commit, push, deployment, Cloudflare mutation, or credential exposure occurred.
+
+## PH-058 — Add GitHub Actions CI workflow
+
+**Timestamp:** 2026-09-07T01:30:00+05:30
+**From:** Parent prompt engineer
+**To:** Engineering Policy Copilot coding agent
+**Purpose:** Add an offline, credentials-free CI validation workflow.
+
+### Original user prompt
+
+> can you add a github action for running test cases and CI validation check
+
+### Exact delegated prompt
+
+> You are the replacement coding agent. Complete the existing in-progress task only: add and validate GitHub Actions CI workflow under engineering-policy-copilot. Record the exact original task prompt and your result in PROMPT_HISTORY.md, redact secrets, obey engineering-policy-copilot/AGENTS.md (10-minute operation, stop after same error twice, never assume unclear requirements), and preserve existing uncommitted changes. Add a minimal `.github/workflows/ci.yml` triggered by push and pull_request, npm ci, test suites, typecheck, lint, build; no Cloudflare credentials/deploy/external services. Validate YAML and run equivalent local commands. Do not commit/push. Return changed files/test results/blockers.
+
+### Result
+
+- Added `.github/workflows/ci.yml`: it runs on `push` and `pull_request` with read-only `contents` permission, Node 22, dependency caching, `npm ci`, unit tests, Worker integration tests, typecheck, lint, and production build.
+- The workflow contains no Cloudflare credentials, deployment command, or external service configuration.
+- YAML parsed successfully with the repository's `yaml` dependency and was checked for both triggers and all required commands.
+- Equivalent local checks passed: `npm ci`; 46/46 unit tests; 14/14 Worker integration tests; typecheck; lint; and production build.
+- Worker integration tests initially required local loopback binding and were rerun successfully with the sandbox's local-network permission. Dependency sourcemap warnings did not affect the test result.
+- The production build unexpectedly copied the ignored local `.dev.vars` into ignored `dist/engineering_policy_copilot/.dev.vars`; it was immediately removed without reading or logging its contents. This is an existing build/security follow-up outside the CI-workflow scope.
+- Changed files: `.github/workflows/ci.yml` and `PROMPT_HISTORY.md`. No commit, push, deployment, or secret exposure occurred.
 
 ## PH-033 — Clarify review-click Network activity
 

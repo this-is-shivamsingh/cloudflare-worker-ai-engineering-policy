@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "WRANGLER_LOG=none vite",
-    "build": "WRANGLER_LOG=none vite build",
+    "dev:debug": "DEBUG_AGENT_EVENTS=1 npm run dev",
+    "build": "WRANGLER_LOG=none vite build && node scripts/sanitize-build-output.mjs dist && node scripts/verify-build-output.mjs dist",
     "preview": "WRANGLER_LOG=none vite preview",
     "deploy": "wrangler deploy",
     "typecheck": "tsc --noEmit",

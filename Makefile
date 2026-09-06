@@ -6,9 +6,9 @@ docker-build:
 	docker compose build
 
 check-cloudflare-auth:
-	@test -n "$$CLOUDFLARE_ACCOUNT_ID" || { echo "CLOUDFLARE_ACCOUNT_ID is required" >&2; exit 1; }
-	@test -n "$$CLOUDFLARE_API_TOKEN_FILE" || { echo "CLOUDFLARE_API_TOKEN_FILE is required" >&2; exit 1; }
-	@test -r "$$CLOUDFLARE_API_TOKEN_FILE" || { echo "CLOUDFLARE_API_TOKEN_FILE must name a readable file" >&2; exit 1; }
+	@test -r .dev.vars || { echo ".dev.vars is required and must be readable" >&2; exit 1; }
+	@grep -q '^CLOUDFLARE_API_TOKEN=' .dev.vars || { echo "CLOUDFLARE_API_TOKEN is missing from .dev.vars" >&2; exit 1; }
+	@grep -q '^CLOUDFLARE_ACCOUNT_ID=' .dev.vars || { echo "CLOUDFLARE_ACCOUNT_ID is missing from .dev.vars" >&2; exit 1; }
 
 docker-run: check-cloudflare-auth
 	HOST_PORT=$(HOST_PORT) docker compose up --build --detach
@@ -20,8 +20,8 @@ docker-logs:
 	docker compose logs --follow app
 
 docker-test:
-	docker compose build
-	docker compose run --rm --no-deps app sh -c 'npm test && npm run test:worker && npm run typecheck && npm run lint && npm run build'
+	docker build --tag engineering-policy-copilot:test .
+	docker run --rm --entrypoint sh engineering-policy-copilot:test -c 'npm test && npm run test:worker && npm run typecheck && npm run lint && npm run build'
 
 docker-smoke: docker-run
 	HOST_PORT=$(HOST_PORT) ./scripts/docker-smoke.sh

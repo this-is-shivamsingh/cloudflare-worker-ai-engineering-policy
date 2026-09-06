@@ -1,0 +1,4 @@
+interface:
+  display_name: "Local Setup"
+  short_description: "Check local tools and Cloudflare readiness."
+  default_prompt: "Use $local-setup to verify local development prerequisites without printing credentials."

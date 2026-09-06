@@ -12,6 +12,7 @@ import {
   SAMPLE_SOURCES,
   updateEditorSource
 } from "./state";
+import { CHAT_PENDING_TEXT, isChatPending, REVIEW_SUBMIT_LABEL } from "./chat-status";
 
 const SESSION_KEY = "engineering-policy-copilot.session";
 
@@ -46,6 +47,7 @@ export function App() {
   const { messages, sendMessage, clearHistory, status, isStreaming, isRecovering } = useAgentChat({ agent });
   const source = sources[inputType];
   const review = reviewForDisplay(agent.state, clearedThroughGeneration);
+  const chatPending = isChatPending(status, isStreaming, isRecovering);
   const resultIsStale = Boolean(
     submittedSnapshot && (submittedSnapshot.type !== inputType || submittedSnapshot.source !== source)
   );
@@ -147,7 +149,7 @@ export function App() {
           <div className="editor-footer">
             <span>{source.length.toLocaleString()} / {MAX_SOURCE_CHARACTERS.toLocaleString()}</span>
             <button className="primary" disabled={!source.trim() || reviewing || clearing} type="submit">
-              {reviewing ? "Reviewing…" : "Run vieview"}
+              {reviewing ? "Reviewing…" : REVIEW_SUBMIT_LABEL}
             </button>
           </div>
           {reviewError ? <p className="error" role="alert">{reviewError}</p> : null}
@@ -217,7 +219,7 @@ export function App() {
               <p>{messageText(message)}</p>
             </article>
           ))}
-          {isRecovering ? <p className="status-copy">Recovering the previous response…</p> : null}
+          {chatPending ? <p className="status-copy" role="status">{isRecovering ? "Recovering the previous response…" : CHAT_PENDING_TEXT}</p> : null}
           {status === "error" ? <p className="error" role="alert">The AI response failed. Deterministic findings remain available.</p> : null}
         </div>
         <form className="chat-form" onSubmit={submitQuestion}>
@@ -228,8 +230,8 @@ export function App() {
             onChange={(event) => setQuestion(event.target.value)}
             placeholder="Ask about a finding or remediation…"
           />
-          <button className="primary" disabled={!review || resultIsStale || !question.trim() || isStreaming || isRecovering || status !== "ready"} type="submit">
-            {isStreaming ? "Answering…" : "Ask"}
+          <button className="primary" disabled={!review || resultIsStale || !question.trim() || chatPending || status !== "ready"} type="submit">
+            {chatPending ? "Answering…" : "Ask"}
           </button>
         </form>
       </section>

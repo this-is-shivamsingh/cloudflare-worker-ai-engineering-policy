@@ -1,2 +1,4 @@
 # Copy to .dev.vars for local development only.
 DEBUG_AGENT_EVENTS=1
+CLOUDFLARE_API_TOKEN='replace-with-workers-ai-api-token'
+CLOUDFLARE_ACCOUNT_ID='replace-with-cloudflare-account-id'

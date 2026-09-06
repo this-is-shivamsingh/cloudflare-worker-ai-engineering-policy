@@ -5,11 +5,10 @@ services:
     init: true
     ports:
       - "127.0.0.1:${HOST_PORT:-5173}:5173"
-    environment:
-      CLOUDFLARE_ACCOUNT_ID: "${CLOUDFLARE_ACCOUNT_ID:-}"
-    secrets:
-      - cloudflare_api_token
-
-secrets:
-  cloudflare_api_token:
-    file: "${CLOUDFLARE_API_TOKEN_FILE:-/dev/null}"
+    volumes:
+      - type: bind
+        source: ./.dev.vars
+        target: /run/secrets/cloudflare_dev_vars
+        read_only: true
+        bind:
+          create_host_path: false
