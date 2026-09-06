@@ -1,0 +1,4 @@
+interface:
+  display_name: "PR Review"
+  short_description: "Review diffs with evidence-based lanes."
+  default_prompt: "Use $pr-review to review this PR or diff with independent evidence-based lanes."

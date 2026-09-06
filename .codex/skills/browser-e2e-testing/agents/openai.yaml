@@ -1,0 +1,4 @@
+interface:
+  display_name: "Browser E2E Testing"
+  short_description: "Verify the local policy copilot UI safely."
+  default_prompt: "Use $browser-e2e-testing to verify the localhost review and chat happy path without logging secrets or model text."

@@ -1,0 +1,2 @@
+# Copy to .dev.vars for local development only.
+DEBUG_AGENT_EVENTS=1

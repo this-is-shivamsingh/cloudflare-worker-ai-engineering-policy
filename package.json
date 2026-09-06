@@ -1,0 +1,44 @@
+{
+  "name": "engineering-policy-copilot",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "WRANGLER_LOG=none vite",
+    "build": "WRANGLER_LOG=none vite build",
+    "preview": "WRANGLER_LOG=none vite preview",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:worker": "WRANGLER_LOG=none vitest run --config vitest.worker.config.ts",
+    "test:watch": "vitest",
+    "cf-typegen": "WRANGLER_LOG=none wrangler types"
+  },
+  "dependencies": {
+    "@ai-sdk/react": "4.0.96",
+    "@cloudflare/ai-chat": "0.11.0",
+    "agents": "0.22.0",
+    "ai": "7.0.93",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "workers-ai-provider": "4.0.0",
+    "yaml": "2.9.0",
+    "zod": "4.5.4"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@cloudflare/vite-plugin": "1.54.4",
+    "@cloudflare/vitest-plugin": "1.1.4",
+    "@types/node": "26.4.1",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.7",
+    "@vitejs/plugin-react": "6.1.1",
+    "eslint": "10.10.0",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.69.0",
+    "vite": "8.2.2",
+    "vitest": "4.1.0",
+    "wrangler": "4.129.0"
+  }
+}

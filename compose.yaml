@@ -1,0 +1,15 @@
+services:
+  app:
+    build:
+      context: .
+    init: true
+    ports:
+      - "127.0.0.1:${HOST_PORT:-5173}:5173"
+    environment:
+      CLOUDFLARE_ACCOUNT_ID: "${CLOUDFLARE_ACCOUNT_ID:-}"
+    secrets:
+      - cloudflare_api_token
+
+secrets:
+  cloudflare_api_token:
+    file: "${CLOUDFLARE_API_TOKEN_FILE:-/dev/null}"

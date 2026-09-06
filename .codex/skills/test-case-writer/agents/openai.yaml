@@ -1,0 +1,4 @@
+interface:
+  display_name: "Test Case Writer"
+  short_description: "Write focused regression tests for changes."
+  default_prompt: "Use $test-case-writer to add focused unit and integration tests for these code changes."
