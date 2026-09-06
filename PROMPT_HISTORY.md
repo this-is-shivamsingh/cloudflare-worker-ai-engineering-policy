@@ -1118,6 +1118,22 @@ This file records visible prompts exchanged during AI-assisted development. It d
 - Expected findings: `GHA001` for the mutable action reference and `GHA002` for overly broad root permissions.
 - No code or external state was changed.
 
+## PH-065 — Add supplied live-demo link to README
+
+**Timestamp:** 2026-09-07T02:40:00+05:30
+**From:** Parent prompt engineer
+**To:** Engineering Policy Copilot coding agent
+**Purpose:** Add the user-supplied live-demo URL without making unsupported deployment claims.
+
+### Exact delegated prompt
+
+> Record this exact prompt in PROMPT_HISTORY.md. User explicitly authorizes a documentation-only README change plus commit and normal non-force push to the configured public repository. In engineering-policy-copilot, add a concise prominent line near the top of README inviting reviewers to try the live demo at `https://engineering-policy-copilot.singhshivam242000.workers.dev/`. Do not claim it is tested/deployed beyond the user's supplied URL. Validate Markdown and inspect git diff; ensure no credentials, `.dev.vars`, generated artifacts, or unrelated changes are staged. Commit only this documentation/prompt-history change with the configured GitHub noreply author and push main to origin normally. No Cloudflare deployment or other resource mutation. Stop after two repeated errors or 10 minutes. Return commit SHA and pushed URL.
+
+### Result
+
+- Added the supplied live-demo URL prominently below the introduction and removed the contradictory statement that the app was not yet deployed. No claim was added beyond the user-supplied live-demo URL.
+- Markdown link assertion and `git diff --check` passed. Only `README.md` and this redacted prompt-history entry are candidates for commit; publication is authorized and pending.
+
 ## PH-064 — Audit, commit, and push completed project work
 
 **Timestamp:** 2026-09-07T02:30:00+05:30

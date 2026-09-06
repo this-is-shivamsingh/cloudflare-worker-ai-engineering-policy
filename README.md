@@ -2,7 +2,9 @@
 
 Engineering Policy Copilot reviews a focused subset of GitHub Actions and Dockerfile guardrails. Deterministic code produces the findings; Cloudflare Workers AI explains those findings and answers follow-up questions without being allowed to change policy truth.
 
-Phase 2 status: implemented, verified locally, and published as source. The app is not yet deployed.
+Phase 2 status: implemented, verified locally, and published as source.
+
+Try the live demo: [Engineering Policy Copilot](https://engineering-policy-copilot.singhshivam242000.workers.dev/).
 
 ## What it demonstrates
 
